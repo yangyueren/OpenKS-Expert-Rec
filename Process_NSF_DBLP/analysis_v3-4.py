@@ -62,24 +62,24 @@ def task1_dataset(entities_project, entities_person, year_fn):
 def train_year_fn(year):
     if year < 2015:
         return True
-train_is_principal_investigator_of = task1_dataset(entities_project, entities_person, train_year_fn)
-print(train_is_principal_investigator_of[0])
+train_rel_is_principal_investigator_of = task1_dataset(entities_project, entities_person, train_year_fn)
+print(train_rel_is_principal_investigator_of[0])
 
 
 def test_year_fn(year):
     if year >= 2015:
         return True
 is_principal_investigator_of = task1_dataset(entities_project, entities_person, test_year_fn)
-val_is_principal_investigator_of = []
-test_is_principal_investigator_of = []
+val_rel_is_principal_investigator_of = []
+test_rel_is_principal_investigator_of = []
 for triple in is_principal_investigator_of:
     if random.random() < 0.3:
-        val_is_principal_investigator_of.append(triple)
+        val_rel_is_principal_investigator_of.append(triple)
     else:
-        test_is_principal_investigator_of.append(triple)
-print(f'val_is_principal_investigator_of {len(val_is_principal_investigator_of)}')
-print(f'test_is_principal_investigator_of {len(test_is_principal_investigator_of)}')
-save_to_disk(train_is_principal_investigator_of, './data/nsfkg/train_is_principal_investigator_of.pkl')
-save_to_disk(val_is_principal_investigator_of, './data/nsfkg/val_is_principal_investigator_of.pkl')
-save_to_disk(test_is_principal_investigator_of, './data/nsfkg/test_is_principal_investigator_of.pkl')
+        test_rel_is_principal_investigator_of.append(triple)
+print(f'val_rel_is_principal_investigator_of {len(val_rel_is_principal_investigator_of)}')
+print(f'test_rel_is_principal_investigator_of {len(test_rel_is_principal_investigator_of)}')
+save_to_disk(train_rel_is_principal_investigator_of, './data/nsfkg/train_rel_is_principal_investigator_of.pkl')
+save_to_disk(val_rel_is_principal_investigator_of, './data/nsfkg/val_rel_is_principal_investigator_of.pkl')
+save_to_disk(test_rel_is_principal_investigator_of, './data/nsfkg/test_rel_is_principal_investigator_of.pkl')
 
