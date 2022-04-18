@@ -3,7 +3,12 @@
 **/.vscode/
 **/.idea/
 **/debug.pkl
+*.log
 
+/TwoTowerRec/pretrained_model
+/TwoTowerRec/data
+/TwoTowerRec/log
+/TwoTowerRec/save
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
