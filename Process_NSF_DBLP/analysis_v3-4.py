@@ -55,6 +55,9 @@ def task1_dataset(entities_project, entities_person, year_fn):
                 idx = random.randint(0,len(entities_person)-1)
                 if entities_person[idx] not in invs:
                     neg_persons.add(entities_person[idx])
+            if pricipal_uid is None or len(p['AbstractNarration']) < 10 or AwardID is None:
+                continue
+                
             triples.append( ('is_principal_investigator_of', pricipal_uid, AwardID, year,list(neg_persons) )) 
     print(f'is_principal_investigator_of {len(triples)}, each with 99 negative persons.')
     return triples
