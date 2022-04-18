@@ -5,6 +5,8 @@
 **/debug.pkl
 *.log
 
+/data
+
 /TwoTowerRec/pretrained_model
 /TwoTowerRec/data
 /TwoTowerRec/log
