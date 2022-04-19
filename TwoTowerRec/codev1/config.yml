@@ -1,0 +1,34 @@
+config:
+  name: TwoTowerRec
+  log_file: ./log/twotower.log
+
+  entities_person: ../../data/datav1/entities_person.pkl
+  entities_project: ../../data/datav1/entities_project.pkl
+  train_data: ../../data/datav1/train_rel_is_principal_investigator_of.pkl
+  val_data: ../../data/datav1/val_rel_is_principal_investigator_of.pkl
+  test_data: ../../data/datav1/test_rel_is_principal_investigator_of.pkl
+
+  epochs: 1000
+  batch_size: 64
+  test_batch_size: 64
+
+  bert_path: ../pretrained_model/bert-base-cased
+
+  lr: !!float
+    1e-4
+  seed: 1
+  save_path: ./save
+  gpu: 1
+  adam_epsilon: !!float
+    1e-6
+  warmup_ratio: 0.06
+  weight_decay: !!float
+    1e-2
+
+  neg_persons_num: 99
+
+  recall_k: 10
+
+  test_every_n_epoch: 10
+  
+  

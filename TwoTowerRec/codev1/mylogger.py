@@ -1,13 +1,17 @@
 import os
 import sys
 import logging
+import yaml
+
 
 def get_logger():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
 
-    rf_handler = logging.FileHandler('./log/twotower2.log')
-    # rf_handler = logging.FileHandler('./log/output_opt_loss.log')
+    with open('./config.yml', 'r') as f:
+        config = yaml.safe_load(f)
+
+    rf_handler = logging.FileHandler(config['config']['log_file'])
     rf_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     rf_handler.setLevel(logging.DEBUG)
     logger.addHandler(rf_handler)

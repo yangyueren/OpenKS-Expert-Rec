@@ -17,8 +17,25 @@ class TwoTowerModel(nn.Module):
         self.bert = AutoModel.from_pretrained(config.bert_path)
         self.tokenizer = AutoTokenizer.from_pretrained(config.bert_path)
 
-
     def forward(self, person_ids, text):
+        
+        person = self.person_emb(person_ids)
+        
+        inputs = self.tokenizer(text, padding=True, truncation=True, return_tensors='pt')
+        inputs.to(self.config.device)
+        outs = self.bert(output_attentions=True, **inputs)
+        text_emb = outs.last_hidden_state[:,0,:]
+
+        mix = torch.cat([person, text_emb], dim=-1)
+        mix = self.fc1(mix)
+        mix = F.relu(self.drop(mix))
+
+        logits = self.fc2(mix).squeeze()
+        return logits
+
+
+
+    def predict(self, person_ids, text):
         
         person = self.person_emb(person_ids)
         
@@ -33,4 +50,4 @@ class TwoTowerModel(nn.Module):
 
         mix = self.fc2(mix).squeeze()
         logits = F.softmax(mix, dim=-1)
-        return logits, logits.argsort().tolist()
+        return logits

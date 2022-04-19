@@ -8,9 +8,9 @@
 /data
 
 /TwoTowerRec/pretrained_model
-/TwoTowerRec/data
-/TwoTowerRec/log
-/TwoTowerRec/save
+/TwoTowerRec/**/data
+/TwoTowerRec/**/log
+/TwoTowerRec/**/save
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

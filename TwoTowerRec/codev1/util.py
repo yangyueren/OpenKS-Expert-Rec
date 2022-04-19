@@ -24,6 +24,7 @@ class Dict2Obj(dict):
 
 def collect_fn(batch):
     persons = torch.tensor([f[0] for f in batch])
-    idx = torch.tensor([f[1] for f in batch])
-    abstract_of_project =  [f[2] for f in batch]
-    return persons, idx, abstract_of_project
+    abstract_of_projects =  [f[1] for f in batch]
+    labels = torch.tensor([f[2] for f in batch])
+    
+    return persons, abstract_of_projects, labels
