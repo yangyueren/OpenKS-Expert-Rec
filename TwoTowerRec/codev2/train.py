@@ -84,7 +84,7 @@ def train(config):
             if recall > g_recall:
                 g_recall = recall
                 logger.info(f'save model with recall {recall.cpu().data}')
-                torch.save(model.cpu().state_dict(), './save/modelv3.pth')
+                torch.save(model.cpu().state_dict(), './save/modelv4.pth')
                 model.to(config.device)
 
 def train_evaluate(preds, labels):
