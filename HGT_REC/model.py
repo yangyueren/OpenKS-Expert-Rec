@@ -106,10 +106,11 @@ class HGTLayer(nn.Module):
             return new_h
 
 class HGT(nn.Module):
-    def __init__(self, G, node_dict, edge_dict, n_inp, n_hid, n_out, n_layers, n_heads, use_norm = True):
+    def __init__(self, node_emb, node_dict, edge_dict, n_inp, n_hid, n_out, n_layers, n_heads, use_norm = True):
         super(HGT, self).__init__()
         self.node_dict = node_dict
         self.edge_dict = edge_dict
+        self.node_emb = node_emb
         self.gcs = nn.ModuleList()
         self.n_inp = n_inp
         self.n_hid = n_hid
@@ -122,14 +123,22 @@ class HGT(nn.Module):
             self.gcs.append(HGTLayer(n_hid, n_hid, node_dict, edge_dict, n_heads, use_norm = use_norm))
         self.out = nn.Linear(n_hid, n_out)
 
-    def forward(self, G, out_key):
+    def forward(self, G, out_key_one, out_key_two):
         h = {}
         for ntype in G.ntypes:
             n_id = self.node_dict[ntype]
-            h[ntype] = F.gelu(self.adapt_ws[n_id](G.nodes[ntype].data['inp']))
+            h[ntype] = F.gelu(self.adapt_ws[n_id](self.node_emb[ntype](G.nodes[ntype].data['id'])))
         for i in range(self.n_layers):
             h = self.gcs[i](G, h)
-        return self.out(h[out_key])
+        h1_dict = {}
+        h2_dict = {}
+        h1_out = self.out(h[out_key_one])
+        h2_out = self.out(h[out_key_two])
+        for i in range(h1_out.shape[0]):
+            h1_dict[G.nodes[out_key_one].data['id'][i].item()] = h1_out[i]
+        for i in range(h2_out.shape[0]):
+            h2_dict[G.nodes[out_key_two].data['id'][i].item()] = h2_out[i]
+        return h1_dict, h2_dict
 
     def save(self, path):
         torch.save({

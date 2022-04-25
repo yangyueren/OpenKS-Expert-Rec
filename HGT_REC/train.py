@@ -25,7 +25,7 @@ def parse_args():
                         help='initial learning rate')
     parser.add_argument('--max_project', type=int, default=5,
                         help='max number of projects the project related to')
-    parser.add_argument('--n_max_neigh', type=int, default=20,
+    parser.add_argument('--n_max_neigh', type=int, default=[20, 20],
                         help='max number of neighs for each layer')
     parser.add_argument('--n_neigh_layer', type=int, default=2,
                         help='number of layers')
@@ -71,7 +71,7 @@ def graph_collate(batch):
     neg_person_list = default_collate([item[4] for item in batch])
     return project_id, batch_sub_g, similar_id, pos_person, neg_person_list
 
-def train(model, G, train_projects_text_emb, train_data_loader, valid_data_loader, test_data_loader, device, args):
+def train(model, train_data_loader, valid_data_loader, test_data_loader, device, args):
     best_ndcg = 0.0
     best_epoch = -1
     n = len(train_data_loader)
@@ -83,24 +83,35 @@ def train(model, G, train_projects_text_emb, train_data_loader, valid_data_loade
     pos_label = torch.ones(args.batch_size).to(device)
     neg_label = torch.zeros(args.batch_size).to(device)
 
-    # eval(model, args, valid_data_loader, proj_text_emb, proj_text_id)
+    eval(model, args, valid_data_loader)
     for epoch in np.arange(args.n_epoch) + 1:
         print('Start epoch: ', epoch)
         model.train()
         for step, batch_data in tqdm(enumerate(train_data_loader), total = n):
             project_id, sub_g, similar_id, pos_person, neg_person_list = batch_data
+            sub_g = sub_g.to(device)
 
-            project_emb = model(sub_g, 'project')
-            person_emb = model(sub_g, 'person')
+            project_emb, person_emb = model(sub_g, 'project', 'person')
 
             cur_emb = torch.zeros(args.batch_size, args.n_dim).to(device)
-            for i in range(args.max_project):
-                cur_emb += project_emb[similar_id[i]]
-
+            for i in range(args.batch_size):
+                for j in range(args.max_project):
+                    cur_emb[i] += project_emb[similar_id[i][j].item()]
             cur_emb /= args.max_project
 
-            pos_score = torch.sigmoid(torch.sum(cur_emb * person_emb[pos_person], -1))
-            neg_score = torch.sigmoid(torch.sum(cur_emb * person_emb[neg_person_list[0]], -1))
+            pos_person_emb = []
+            for i in range(args.batch_size):
+                pos_person_emb.append(person_emb[pos_person[i].item()])
+            pos_person_emb = torch.stack(pos_person_emb)
+            neg_person_emb = []
+            for i in range(args.batch_size):
+                neg_person_emb.append(person_emb[neg_person_list[i][0].item()])
+            neg_person_emb = torch.stack(neg_person_emb)
+
+            pos_score = torch.sigmoid(torch.sum(cur_emb * pos_person_emb, -1))
+            neg_score = torch.sigmoid(torch.sum(cur_emb * neg_person_emb, -1))
+            # pos_score = torch.sigmoid(torch.sum(cur_emb * person_emb[pos_person], -1))
+            # neg_score = torch.sigmoid(torch.sum(cur_emb * person_emb[neg_person_list[0]], -1))
             pos_loss = loss_fn(pos_score, pos_label)
             neg_loss = loss_fn(neg_score, neg_label)
             loss = pos_loss + neg_loss
@@ -109,7 +120,7 @@ def train(model, G, train_projects_text_emb, train_data_loader, valid_data_loade
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
             optimizer.step()
         scheduler.step()
-        mean_p, mean_r, mean_h, mean_ndcg = eval(model, args, valid_data_loader, proj_text_emb, proj_text_id)
+        mean_p, mean_r, mean_h, mean_ndcg = eval(model, args, valid_data_loader)
         print(f'Valid:\tprecision_c@{args.topk}:{mean_p:.6f}, recall_c@{args.topk}:{mean_r:.6f}, '
               f'hr_c@{args.topk}:{mean_h:.6f}, ndcg_c@{args.topk}:{mean_ndcg:.6f}')
         if mean_ndcg > best_ndcg:
@@ -121,38 +132,47 @@ def train(model, G, train_projects_text_emb, train_data_loader, valid_data_loade
             print('Stop training after %i epochs without improvement on validation.' % args.patience)
             break
     model.load(args.save)
-    mean_p, mean_r, mean_h, mean_ndcg = eval(model, args, test_data_loader, proj_text_emb, proj_text_id)
+    mean_p, mean_r, mean_h, mean_ndcg = eval(model, args, test_data_loader)
     print(f'Test:\tprecision_c@{args.topk}:{mean_p:.6f}, recall_c@{args.topk}:{mean_r:.6f}, '
           f'hr_c@{args.topk}:{mean_h:.6f}, ndcg_c@{args.topk}:{mean_ndcg:.6f}')
 
 
-def eval(model, args, eval_data_loader, proj_text_emb, proj_text_id):
+def eval(model, args, eval_data_loader):
     model.eval()
     eval_p = []
     eval_r = []
     eval_h = []
     eval_ndcg = []
     eval_len = []
+    n = len(eval_data_loader)
     with torch.no_grad():
-        for step, batch_data in enumerate(eval_data_loader):
-            project_id, project_text_emb, pos_person, neg_person_list = batch_data
-            neg_person_list = torch.transpose(torch.stack(neg_person_list), 0, 1)
-            pos_person = pos_person.unsqueeze(1)
+        for step, batch_data in tqdm(enumerate(eval_data_loader), total = n):
+            project_id, sub_g, similar_id, pos_person, neg_person_list = batch_data
+            sub_g = sub_g.to(device)
 
-            indices = Calculate_Similarity(project_text_emb, proj_text_emb, args)
+            project_emb, person_emb = model(sub_g, 'project', 'person')
 
-            project_emb = model(G, 'project')
-            person_emb = model(G, 'person')
-
-            cur_emb = torch.zeros(args.batch_size, args.n_dim)
-            for i in range(args.max_project):
-                similar_id = proj_text_id[indices[:, i]]
-                cur_emb += project_emb[similar_id]
+            cur_emb = torch.zeros(args.batch_size, args.n_dim).to(device)
+            for i in range(args.batch_size):
+                for j in range(args.max_project):
+                    cur_emb[i] += project_emb[similar_id[i][j].item()]
             cur_emb /= args.max_project
 
+            neg_person_list = torch.transpose(torch.stack(neg_person_list), 0, 1)
+            pos_person = pos_person.unsqueeze(1)
             person_list = torch.cat((pos_person, neg_person_list), dim=1)
             cur_emb = cur_emb.unsqueeze(1)
-            score = torch.sigmoid(torch.sum(cur_emb * person_emb[person_list], -1))
+
+            eval_person_emb = []
+            for i in range(args.batch_size):
+                temp =[]
+                for j in range(person_list.size(1)):
+                    temp.append(person_emb[person_list[i][j].item()])
+                temp = torch.stack(temp)
+                eval_person_emb.append(temp)
+            eval_person_emb = torch.stack(eval_person_emb)
+
+            score = torch.sigmoid(torch.sum(cur_emb * eval_person_emb, -1))
             pred_person_index = torch.topk(score, args.topk)[1].tolist()
 
             p_at_k = getP(pred_person_index, [0])
@@ -217,9 +237,9 @@ if __name__ == '__main__':
         test_data = pickle.load(f)
 
     use_cuda = torch.cuda.is_available() and args.cuda
-    device = torch.device('cuda' if use_cuda else 'cpu')
-    print(device)
-    # device = torch.device('cpu')
+    # device = torch.device('cuda' if use_cuda else 'cpu')
+    # print(device)
+    device = torch.device('cpu')
 
     G = dgl.heterograph({
         ('project', 'investigated-by', 'person'): (project_main_row, person_main_col),
@@ -246,10 +266,13 @@ if __name__ == '__main__':
         # G.edges[etype].data['id'] = torch.ones(G.number_of_edges(etype), dtype=torch.long) * edge_dict[etype]
 
     # Random initialize input feature
+    node_emb = {}
     for ntype in G.ntypes:
-        emb = nn.Parameter(torch.Tensor(G.number_of_nodes(ntype), args.n_dim)) #, requires_grad=False
-        nn.init.xavier_uniform_(emb)
-        G.nodes[ntype].data['inp'] = emb
+        G.nodes[ntype].data['id'] = torch.arange(0, G.number_of_nodes(ntype))
+        emb = nn.Embedding(G.number_of_nodes(ntype), args.n_dim) #, requires_grad=False
+        nn.init.xavier_uniform_(emb.weight)
+        emb.weight.data[0] = 0
+        node_emb[ntype] = emb.to(device)
 
     # G = G.to(device)
 
@@ -257,7 +280,7 @@ if __name__ == '__main__':
         dataset=NSFDataset(G, train_data, train_projects_text_emb, args),
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=8,
+        num_workers=0,
         collate_fn=graph_collate,
         pin_memory=True
     )
@@ -265,7 +288,7 @@ if __name__ == '__main__':
         dataset=NSFDataset(G, valid_data, train_projects_text_emb, args),
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=8,
+        num_workers=0,
         collate_fn=graph_collate,
         pin_memory=True
     )
@@ -273,12 +296,12 @@ if __name__ == '__main__':
         dataset=NSFDataset(G, test_data, train_projects_text_emb, args),
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=8,
+        num_workers=0,
         collate_fn=graph_collate,
         pin_memory=True
     )
 
-    hgt_model = HGT(G,
+    hgt_model = HGT(node_emb,
                 node_dict, edge_dict,
                 n_inp=args.n_dim,
                 n_hid=args.n_hid,
@@ -289,7 +312,7 @@ if __name__ == '__main__':
 
 
     print('Training HGT with #param: %d' % (get_n_params(hgt_model)))
-    train(hgt_model, G, train_projects_text_emb, train_data_loader, valid_data_loader, test_data_loader, device, args)
+    train(hgt_model, train_data_loader, valid_data_loader, test_data_loader, device, args)
 
 
 
