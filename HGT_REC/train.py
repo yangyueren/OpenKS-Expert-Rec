@@ -83,7 +83,7 @@ def train(model, train_data_loader, valid_data_loader, test_data_loader, device,
     pos_label = torch.ones(args.batch_size).to(device)
     neg_label = torch.zeros(args.batch_size).to(device)
 
-    eval(model, args, valid_data_loader)
+    # eval(model, args, valid_data_loader)
     for epoch in np.arange(args.n_epoch) + 1:
         print('Start epoch: ', epoch)
         model.train()
