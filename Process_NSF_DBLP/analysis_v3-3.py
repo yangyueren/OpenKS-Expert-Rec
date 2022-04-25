@@ -115,8 +115,8 @@ print(f'sample_dblp_paper {len(sample_dblp_paper)}')
 
 # %%
 # cnt = 0
-# for k,v in sample_nsf2dblp.items():
-#     if len(v) == 1:
+# for k,v1 in sample_nsf2dblp.items():
+#     if len(v1) == 1:
 #         cnt += 1
 # print(cnt, len(sample_nsf2dblp), cnt/len(sample_nsf2dblp))
 
