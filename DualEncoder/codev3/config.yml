@@ -1,0 +1,39 @@
+config:
+  name: TwoTowerRec
+  log_dir: ./log/twotowerv1/
+
+  entities_person: ../../data/datav1/entities_person.pkl
+  entities_project: ../../data/datav1/entities_project.pkl
+  train_data: ../../data/datav1/train_rel_is_principal_investigator_of.pkl
+  val_data: ../../data/datav1/val_rel_is_principal_investigator_of.pkl
+  test_data: ../../data/datav1/test_rel_is_principal_investigator_of.pkl
+
+  paper_emb: ../../data/datav1/emb_paper_all_mpnet_base_v2.pkl
+  rel_is_publisher_of : ../../data/datav1/rel_is_publisher_of.pkl
+
+  epochs: 100
+  batch_size: 64
+  test_batch_size: 64
+
+  bert_path: ../pretrained_model/bert-base-cased
+
+  lr: !!float
+    1e-4
+  seed: 37
+  gpu: 1
+  adam_epsilon: !!float
+    1e-6
+  warmup_ratio: 0.06
+  weight_decay: !!float
+    1e-2
+
+  neg_persons_num_train: 1
+  neg_persons_num: 99
+
+  recall_k: 10
+
+  test_every_n_epoch: 1
+
+  debug: 0
+  
+  

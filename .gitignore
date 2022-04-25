@@ -6,11 +6,12 @@
 *.log
 
 /data
+/pyg
 
-/TwoTowerRec/pretrained_model
-/TwoTowerRec/**/data
-/TwoTowerRec/**/log
-/TwoTowerRec/**/save
+/DualEncoder/pretrained_model
+/DualEncoder/**/data
+/DualEncoder/**/log
+/DualEncoder/**/save
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
