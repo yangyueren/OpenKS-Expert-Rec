@@ -1,0 +1,21 @@
+# Expert Recommendation
+
+## Process Data and Generate Embeddings
+
+```
+ls | xargs md5sum
+db02e5ee8d08ef58d5a5d51cc6e17c79  entities_paper.pkl
+5b73a965d50d0abc2ebe0fe1eae61a91  entities_person.pkl
+e1555ebf27f6a96be8a63990d4091c19  entities_project.pkl
+1bdb571b4fa88408c204df25b6133e47  project_emb_all_mpnet_base_v2.pkl
+89e71bdfcdd541ec63cb26bad4db0eff  project_emb_multi_qa_mpnet_base_dot_v1.pkl
+9ee4e00853d5626da7c34f1b4daa13c3  rel_co_author.pkl
+721d44a5218e16039058fc6507fd8261  rel_cooperate.pkl
+1095ddec315ebb85696afc98d9b6df53  rel_is_investigator_of.pkl
+24770f4cc49f7ee561c913f65b5fc7a2  rel_is_principal_investigator_of.pkl
+816c98d80e07d7e207ac42977cda9e85  rel_is_publisher_of.pkl
+965a04a1ee209a0f61ab360b8bbcc2a1  rel_reference.pkl
+5155a82c92e9012faa102eceb7b14b9a  test_rel_is_principal_investigator_of.pkl
+87225926d56af9f8e60796755a62597f  train_rel_is_principal_investigator_of.pkl
+3ba984ad1ba41e1e2875db8b371f5440  val_rel_is_principal_investigator_of.pkl
+```
