@@ -237,9 +237,9 @@ if __name__ == '__main__':
         test_data = pickle.load(f)
 
     use_cuda = torch.cuda.is_available() and args.cuda
-    # device = torch.device('cuda' if use_cuda else 'cpu')
-    # print(device)
-    device = torch.device('cpu')
+    device = torch.device('cuda' if use_cuda else 'cpu')
+    print(device)
+    # device = torch.device('cpu')
 
     G = dgl.heterograph({
         ('project', 'investigated-by', 'person'): (project_main_row, person_main_col),
