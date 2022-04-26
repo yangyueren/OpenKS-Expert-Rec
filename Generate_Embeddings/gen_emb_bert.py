@@ -67,7 +67,7 @@ def main():
     #     md5 = str(hashlib.md5(content).hexdigest())
     #     print(md5)
     # print("Time consumed [%s]: %.2f s" % (outfile, time.perf_counter() - START))
-    # all-mpnet-base-v2:          1bdb571b4fa88408c204df25b6133e47
+    # all-mpnet-base-v3:          1bdb571b4fa88408c204df25b6133e47
     # multi-qa-mpnet-base-dot-v1: 89e71bdfcdd541ec63cb26bad4db0eff
 
 

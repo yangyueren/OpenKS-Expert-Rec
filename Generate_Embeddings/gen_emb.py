@@ -27,12 +27,12 @@ def gen_emb(ent, model):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default="all-mpnet-base-v2")
+    parser.add_argument("--model", type=str, default="all-mpnet-base-v3")
     parser.add_argument("--data_file", type=str)
     parser.add_argument("--output_dir", type=str)
     args = parser.parse_args()
 
-    assert args.model in ["all-mpnet-base-v2", "multi-qa-mpnet-base-dot-v1"]
+    assert args.model in ["all-mpnet-base-v3", "multi-qa-mpnet-base-dot-v1"]
     print("Loading model...")
     START = time.perf_counter()
     model = SentenceTransformer(args.model)
@@ -65,7 +65,7 @@ def main():
         md5 = str(hashlib.md5(content).hexdigest())
         print(md5)
     print("Time consumed [%s]: %.2f s" % (outfile, time.perf_counter() - START))
-    # all-mpnet-base-v2:          1bdb571b4fa88408c204df25b6133e47
+    # all-mpnet-base-v3:          1bdb571b4fa88408c204df25b6133e47
     # multi-qa-mpnet-base-dot-v1: 89e71bdfcdd541ec63cb26bad4db0eff
 
 
