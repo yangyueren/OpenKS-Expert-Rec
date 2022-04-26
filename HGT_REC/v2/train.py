@@ -21,9 +21,9 @@ def parse_args():
     parser.add_argument('--n_hid', type=int, default=256)
     parser.add_argument('--n_dim', type=int, default=256)
     parser.add_argument('--clip', type=int, default=5.0)
-    parser.add_argument('--lr', type=float, default=5e-3,
+    parser.add_argument('--lr', type=float, default=5e-4,
                         help='initial learning rate')
-    parser.add_argument('--max_project', type=int, default=5,
+    parser.add_argument('--max_project', type=int, default=3,
                         help='max number of projects the project related to')
     parser.add_argument('--n_max_neigh', type=int, default=[5, 10],
                         help='max number of neighs for each layer')
@@ -51,6 +51,8 @@ def parse_args():
     args.save = args.save + '_n_hid{}'.format(args.n_hid)
     args.save = args.save + '_n_dim{}'.format(args.n_dim)
     args.save = args.save + '_lr{}'.format(args.lr)
+    args.save = args.save + '_max_project{}'.format(args.max_project)
+    args.save = args.save + '_n_head{}'.format(args.n_head)
     args.save = args.save + 'clip{}_model.pt'.format(args.clip)
     return args
 
@@ -77,7 +79,7 @@ def train(model, train_data_loader, valid_data_loader, test_data_loader, device,
     n = len(train_data_loader)
     loss_fn = nn.BCELoss().to(device)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.decay_step, gamma=args.decay)
 
     # eval(model, args, valid_data_loader)
