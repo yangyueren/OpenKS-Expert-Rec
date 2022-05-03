@@ -5,13 +5,25 @@
 **/debug.pkl
 *.log
 
+*.pkl
+
 /data
-/pyg
+/pyg/**/data
+/pyg/**/tmp
+/pyg/**/log
 
 /DualEncoder/pretrained_model
 /DualEncoder/**/data
 /DualEncoder/**/log
 /DualEncoder/**/save
+
+
+
+
+
+
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

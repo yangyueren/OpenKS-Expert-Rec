@@ -1,0 +1,61 @@
+config:
+  name: TwoTowerRec
+  log_dir: ./log/twotowerv1/
+
+  entities_person: ../../data/datav1/entities_person.pkl
+  # entities_project: ../../data/datav1/entities_project.pkl
+  # entities_paper: ../../data/datav1/entities_paper.pkl
+  # rel_co_author: ../../data/datav1/rel_co_author.pkl
+  # rel_cooperate: ../../data/datav1/rel_cooperate.pkl
+  # rel_is_publisher_of: ../../data/datav1/rel_is_publisher_of.pkl
+  # rel_reference: ../../data/datav1/rel_reference.pkl
+
+  # train_data: ../../data/datav1/train_rel_is_principal_investigator_of.pkl
+  # val_data: ../../data/datav1/val_rel_is_principal_investigator_of.pkl
+  # test_data: ../../data/datav1/test_rel_is_principal_investigator_of.pkl
+
+
+ # 下面是id化后的数据
+  project_emb: ./data/project_emb.pkl
+  paper_emb: ./data/paper_emb.pkl
+  rel_co_author: ./data/rel_co_author.pkl
+  rel_cooperate: ./data/rel_cooperate.pkl
+  rel_published_by: ./data/rel_published_by.pkl
+  rel_reference: ./data/rel_reference.pkl
+  rel_pricipal_investigator_by: ./data/rel_pricipal_investigator_by.pkl
+
+  train_data: ./data/train_rel_pricipal_investigator.pkl
+  val_data: ./data/val_rel_pricipal_investigator.pkl
+  test_data: ./data/test_rel_pricipal_investigator.pkl
+
+  epochs: 100
+  batch_size: 128
+  test_batch_size: 64
+
+  bert_path: /home/zy/data2/yyr/codes/kg4proj-rec/OpenKS-Expert-Rec/DualEncoder/pretrained_model/bert-base-cased
+
+  hidden_channels: 200
+  out_channels: 64
+
+
+
+  lr: !!float
+    1e-4
+  seed: 37
+  gpu: 1
+  adam_epsilon: !!float
+    1e-6
+  warmup_ratio: 0.06
+  weight_decay: !!float
+    1e-2
+
+  neg_persons_num_train: 1
+  neg_persons_num: 99
+
+  recall_k: 10
+
+  test_every_n_epoch: 5
+
+  debug: 0
+  
+  
