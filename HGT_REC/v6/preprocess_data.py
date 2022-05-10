@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import pickle
 import json
+import joblib
 
 root_path = '/home/disk1/ls/project/zheda_nsf/data/'
 with open(root_path + 'entities_paper.pkl', 'rb') as f:
@@ -16,9 +17,7 @@ with open(root_path + 'val_rel_is_principal_investigator_of.pkl', 'rb') as f:
 with open(root_path + 'test_rel_is_principal_investigator_of.pkl', 'rb') as f:
     test_data = pickle.load(f)
 with open(root_path + 'project_emb_bert.pkl', 'rb') as f:
-    project_emb_data = pickle.load(f)
-with open(root_path + 'paper_emb_bert.pkl', 'rb') as f:
-    paper_emb_data = pickle.load(f)
+    emb_data = pickle.load(f)
 
 train_project = []
 for train_one in train_data:
@@ -99,24 +98,30 @@ for paper in papers:
             continue
         paper_ref_row.append(paper2index[paper['_id']])
 
+# projects_text_emb = {}
+# train_projects_text_emb ={}
+# for i in range(len(emb_data)):
+#     if emb_data[i][2] is not None:
+#         projects_text_emb[project2index[emb_data[i][0]]] = emb_data[i][2]
+#         if emb_data[i][0] in train_project:
+#             train_projects_text_emb[project2index[emb_data[i][0]]] = emb_data[i][2]
+
+
+pro_id = list(project2index.keys())
 projects_text_emb = {}
 train_projects_text_emb ={}
-for i in range(len(project_emb_data)):
-    if project_emb_data[i][2] is not None:
-        projects_text_emb[project2index[project_emb_data[i][0]]] = project_emb_data[i][2]
-        if project_emb_data[i][0] in train_project:
-            train_projects_text_emb[project2index[project_emb_data[i][0]]] = project_emb_data[i][2]
-
-paper_text_emb = {}
-for i in range(len(paper_emb_data)):
-    if paper_emb_data[i][2] is not None:
-        paper_text_emb[paper2index[paper_emb_data[i][0]]] = paper_emb_data[i][2]
+assert len(pro_id) == len(emb_data), 'error'
+for i in range(len(emb_data)):
+    projects_text_emb[project2index[pro_id[i]]] = emb_data[i]
+    if pro_id[i] in train_project:
+        train_projects_text_emb[project2index[pro_id[i]]] = emb_data[i]
 
 train_dataset = []
 for index in range(len(train_data)):
     project_id = project2index[train_data[index][2]]
     pos_person = person2index[train_data[index][1]]
-    project_text_emb = projects_text_emb[project_id]
+    # project_text_emb = projects_text_emb[project_id]
+    project_text_emb = []
     neg_person = []
     for i in range(len(train_data[index][4])):
         neg_person.append(person2index[train_data[index][4][i]])
@@ -126,7 +131,8 @@ valid_dataset = []
 for index in range(len(valid_data)):
     project_id = project2index[valid_data[index][2]]
     pos_person = person2index[valid_data[index][1]]
-    project_text_emb = projects_text_emb[project_id]
+    # project_text_emb = projects_text_emb[project_id]
+    project_text_emb = []
     neg_person = []
     for i in range(len(valid_data[index][4])):
         neg_person.append(person2index[valid_data[index][4][i]])
@@ -136,40 +142,39 @@ test_dataset = []
 for index in range(len(test_data)):
     project_id = project2index[test_data[index][2]]
     pos_person = person2index[test_data[index][1]]
-    project_text_emb = projects_text_emb[project_id]
+    # project_text_emb = projects_text_emb[project_id]
+    project_text_emb = []
     neg_person = []
     for i in range(len(test_data[index][4])):
         neg_person.append(person2index[test_data[index][4][i]])
     test_dataset.append((project_id, project_text_emb, pos_person, neg_person))
 
 with open(root_path + '/index.pkl', 'wb') as f:
-    pickle.dump(project2index, f)
-    pickle.dump(index2project, f)
-    pickle.dump(paper2index, f)
-    pickle.dump(index2paper, f)
-    pickle.dump(person2index, f)
-    pickle.dump(index2person, f)
+    joblib.dump(project2index, f)
+    joblib.dump(index2project, f)
+    joblib.dump(paper2index, f)
+    joblib.dump(index2paper, f)
+    joblib.dump(person2index, f)
+    joblib.dump(index2person, f)
 
 with open(root_path + '/dgl_data.pkl', 'wb') as f:
-    pickle.dump(project_main_row, f)
-    pickle.dump(person_main_col, f)
-    pickle.dump(project_co_row, f)
-    pickle.dump(person_co_col, f)
-    pickle.dump(paper_ref_row, f)
-    pickle.dump(paper_ref_col, f)
-    pickle.dump(paper_auther_row, f)
-    pickle.dump(author_col, f)
+    joblib.dump(project_main_row, f)
+    joblib.dump(person_main_col, f)
+    joblib.dump(project_co_row, f)
+    joblib.dump(person_co_col, f)
+    joblib.dump(paper_ref_row, f)
+    joblib.dump(paper_ref_col, f)
+    joblib.dump(paper_auther_row, f)
+    joblib.dump(author_col, f)
 
-with open(root_path + '/train_dataset.pkl', 'wb') as f:
-    pickle.dump(train_dataset, f)
+with open(root_path + '/train_dataset.pkl', 'wb') as f1:
+    joblib.dump(train_dataset, f1)
 
-with open(root_path + '/valid_dataset.pkl', 'wb') as f:
-    pickle.dump(valid_dataset, f)
+with open(root_path + '/valid_dataset.pkl', 'wb') as f2:
+    joblib.dump(valid_dataset, f2)
 
-with open(root_path + '/test_dataset.pkl', 'wb') as f:
-    pickle.dump(test_dataset, f)
+with open(root_path + '/test_dataset.pkl', 'wb') as f3:
+    joblib.dump(test_dataset, f3)
 
-with open(root_path + '/text_emb.pkl', 'wb') as f:
-    pickle.dump(train_projects_text_emb, f)
-    pickle.dump(projects_text_emb, f)
-    pickle.dump(paper_text_emb, f)
+with open(root_path + '/projects_text_emb.pkl', 'wb') as f4:
+    joblib.dump(train_projects_text_emb, f4)

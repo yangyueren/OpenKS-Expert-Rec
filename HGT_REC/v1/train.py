@@ -178,8 +178,8 @@ if __name__ == '__main__':
     dgl_data_path = root_path + 'data/dgl_data.pkl'
     emb_data_path = root_path + 'data/projects_text_emb.pkl'
     train_data_path = root_path + 'data/train_dataset.pkl'
-    valid_data_path = root_path + 'data/train_dataset.pkl'
-    test_data_path = root_path + 'data/train_dataset.pkl'
+    valid_data_path = root_path + 'data/valid_dataset.pkl'
+    test_data_path = root_path + 'data/test_dataset.pkl'
 
     print('start')
 

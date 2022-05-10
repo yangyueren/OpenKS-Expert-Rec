@@ -16,20 +16,20 @@ def parse_args():
 
     parser.add_argument('--n_epoch', type=int, default=200,
                         help='upper epoch limit')
-    parser.add_argument('--batch_size', type=int, default=4,
+    parser.add_argument('--batch_size', type=int, default=8,
                         help='batch size')
-    parser.add_argument('--n_hid', type=int, default=256)
+    parser.add_argument('--n_hid', type=int, default=128)
     parser.add_argument('--n_dim', type=int, default=256)
-    parser.add_argument('--clip', type=int, default=5.0)
-    parser.add_argument('--lr', type=float, default=5e-3,
+    parser.add_argument('--clip', type=int, default=1.0)
+    parser.add_argument('--lr', type=float, default=5e-4,
                         help='initial learning rate')
-    parser.add_argument('--max_project', type=int, default=5,
+    parser.add_argument('--max_project', type=int, default=1,
                         help='max number of projects the project related to')
-    parser.add_argument('--n_max_neigh', type=int, default=[5, 10],
+    parser.add_argument('--n_max_neigh', type=int, default=[5, 5],
                         help='max number of neighs for each layer')
     parser.add_argument('--n_neigh_layer', type=int, default=2,
                         help='number of layers')
-    parser.add_argument('--n_head', type=int, default=4,
+    parser.add_argument('--n_head', type=int, default=2,
                         help='number of head')
     parser.add_argument('--cuda', action='store_true', default=True,
                         help='use GPU for training')
@@ -51,7 +51,9 @@ def parse_args():
     args.save = args.save + '_n_hid{}'.format(args.n_hid)
     args.save = args.save + '_n_dim{}'.format(args.n_dim)
     args.save = args.save + '_lr{}'.format(args.lr)
-    args.save = args.save + 'clip{}_model.pt'.format(args.clip)
+    args.save = args.save + '_max_project{}'.format(args.max_project)
+    args.save = args.save + '_n_head{}'.format(args.n_head)
+    args.save = args.save + '_clip{}_model.pt'.format(args.clip)
     return args
 
 def get_n_params(model):
@@ -67,9 +69,10 @@ def graph_collate(batch):
     project_id = default_collate([item[0] for item in batch])
     batch_sub_g = dgl.batch([item[1] for item in batch])
     similar_id = default_collate([item[2] for item in batch])
-    pos_person = default_collate([item[3] for item in batch])
-    neg_person_list = default_collate([item[4] for item in batch])
-    return project_id, batch_sub_g, similar_id, pos_person, neg_person_list
+    emb_weight = default_collate([item[3] for item in batch])
+    pos_person = default_collate([item[4] for item in batch])
+    neg_person_list = default_collate([item[5] for item in batch])
+    return project_id, batch_sub_g, similar_id, emb_weight, pos_person, neg_person_list
 
 def train(model, train_data_loader, valid_data_loader, test_data_loader, device, args):
     best_ndcg = 0.0
@@ -85,28 +88,40 @@ def train(model, train_data_loader, valid_data_loader, test_data_loader, device,
         print('Start epoch: ', epoch)
         model.train()
         for step, batch_data in tqdm(enumerate(train_data_loader), total = n):
-            project_id, sub_g, similar_id, pos_person, neg_person_list = batch_data
+            project_id, sub_g, similar_id, emb_weight, pos_person, neg_person_list = batch_data
             batch_size = project_id.shape[0]
             pos_label = torch.ones(batch_size).to(device)
             neg_label = torch.zeros(batch_size).to(device)
             sub_g = sub_g.to(device)
 
+            # emb_weight = nn.functional.softmax(emb_weight,dim=1)
+
             project_emb, person_emb = model(sub_g, 'project', 'person')
 
+
             cur_emb = torch.zeros(batch_size, args.n_dim).to(device)
+            for i in range(batch_size):
+                    cur_emb[i] = project_emb[similar_id[i].item()]
 
-            for i in range(args.max_project):
-                    cur_emb += project_emb[similar_id[:, i]]
-            cur_emb /= args.max_project
+            pos_person_emb = []
+            for i in range(batch_size):
+                pos_person_emb.append(person_emb[pos_person[i].item()])
+            pos_person_emb = torch.stack(pos_person_emb)
+            neg_person_emb = []
+            for i in range(batch_size):
+                neg_person_emb.append(person_emb[neg_person_list[i][0].item()])
+            neg_person_emb = torch.stack(neg_person_emb)
 
-            pos_score = torch.sigmoid(torch.sum(cur_emb * person_emb[pos_person], -1))
-            neg_score = torch.sigmoid(torch.sum(cur_emb * person_emb[neg_person_list[0]], -1))
+            pos_score = torch.sigmoid(torch.sum(cur_emb * pos_person_emb, -1))
+            neg_score = torch.sigmoid(torch.sum(cur_emb * neg_person_emb, -1))
+            # pos_score = torch.sigmoid(torch.sum(cur_emb * person_emb[pos_person], -1))
+            # neg_score = torch.sigmoid(torch.sum(cur_emb * person_emb[neg_person_list[0]], -1))
             pos_loss = loss_fn(pos_score, pos_label)
             neg_loss = loss_fn(neg_score, neg_label)
             loss = pos_loss + neg_loss
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
             optimizer.step()
         scheduler.step()
         mean_p, mean_r, mean_h, mean_ndcg = eval(model, args, valid_data_loader)
@@ -136,29 +151,39 @@ def eval(model, args, eval_data_loader):
     n = len(eval_data_loader)
     with torch.no_grad():
         for step, batch_data in tqdm(enumerate(eval_data_loader), total = n):
-            project_id, sub_g, similar_id, pos_person, neg_person_list = batch_data
-            batch_size = project_id.shape[0]
+            project_id, sub_g, similar_id, emb_weight, pos_person, neg_person_list = batch_data
             sub_g = sub_g.to(device)
+            batch_size = project_id.shape[0]
+            emb_weight = nn.functional.softmax(emb_weight, dim=1)
 
             project_emb, person_emb = model(sub_g, 'project', 'person')
 
-            cur_emb = torch.zeros(batch_size, args.n_dim)
-            for i in range(args.max_project):
-                cur_emb += project_emb[similar_id[:, i]]
-            cur_emb /= args.max_project
+            cur_emb = torch.zeros(batch_size, args.n_dim).to(device)
+            for i in range(batch_size):
+                for j in range(args.max_project):
+                    cur_emb[i] += emb_weight[i][j] * project_emb[similar_id[i][j].item()]
 
             neg_person_list = torch.transpose(torch.stack(neg_person_list), 0, 1)
             pos_person = pos_person.unsqueeze(1)
-            person_list = torch.cat((pos_person, neg_person_list), dim=1)
+            person_list = torch.cat((neg_person_list, pos_person), dim=1)
             cur_emb = cur_emb.unsqueeze(1)
-            score = torch.sigmoid(torch.sum(cur_emb * person_emb[person_list], -1))
-            pred_person_index = torch.topk(score, args.topk)[1].tolist()
 
+            eval_person_emb = []
             for i in range(batch_size):
-                p_at_k = getP(pred_person_index[i], [0])
-                r_at_k = getR(pred_person_index[i], [0])
-                h_at_k = getHitRatio(pred_person_index[i], [0])
-                ndcg_at_k = getNDCG(pred_person_index[i], [0])
+                temp =[]
+                for j in range(person_list.size(1)):
+                    temp.append(person_emb[person_list[i][j].item()])
+                temp = torch.stack(temp)
+                eval_person_emb.append(temp)
+            eval_person_emb = torch.stack(eval_person_emb)
+
+            score = torch.sigmoid(torch.sum(cur_emb * eval_person_emb, -1))
+            pred_person_index = torch.topk(score, args.topk)[1].tolist()
+            for i in range(batch_size):
+                p_at_k = getP(pred_person_index[i], [99])
+                r_at_k = getR(pred_person_index[i], [99])
+                h_at_k = getHitRatio(pred_person_index[i], [99])
+                ndcg_at_k = getNDCG(pred_person_index[i], [99])
                 eval_p.append(p_at_k)
                 eval_r.append(r_at_k)
                 eval_h.append(h_at_k)
@@ -166,17 +191,46 @@ def eval(model, args, eval_data_loader):
                 eval_len.append(1)
             if (step % args.log_step == 0) and step > 0:
                 print('Valid epoch:[{}/{} ({:.0f}%)]\t Recall: {:.6f}, AvgRecall: {:.6f}'.format(step, len(eval_data_loader),
-                                                            100. * step / len(eval_data_loader), r_at_k, np.mean(eval_r)))
+                                                                100. * step / len(eval_data_loader), r_at_k, np.mean(eval_r)))
         mean_p = np.mean(eval_p)
         mean_r = np.mean(eval_r)
         mean_h = np.sum(eval_h) / np.sum(eval_len)
         mean_ndcg = np.mean(eval_ndcg)
         return mean_p, mean_r, mean_h, mean_ndcg
 
+def inference_expert(model, args, infer_data):
+    model.eval()
+    project_id, sub_g, similar_id, person_list = infer_data
+    sub_g = sub_g.to(device)
+    batch_size = project_id.shape[0]
+    project_emb, person_emb = model(sub_g, 'project', 'person')
+
+    cur_emb = torch.zeros(batch_size, args.n_dim).to(device)
+    for i in range(batch_size):
+        for j in range(args.max_project):
+            cur_emb[i] += project_emb[similar_id[i][j].item()]
+    cur_emb /= args.max_project
+
+    cur_emb = cur_emb.unsqueeze(1)
+
+    eval_person_emb = []
+    for i in range(batch_size):
+        temp =[]
+        for j in range(person_list.size(1)):
+            temp.append(person_emb[person_list[i][j].item()])
+        temp = torch.stack(temp)
+        eval_person_emb.append(temp)
+    eval_person_emb = torch.stack(eval_person_emb)
+
+    score = torch.sigmoid(torch.sum(cur_emb * eval_person_emb, -1))
+    pred_person_index = torch.max(score)[1]
+    return pred_person_index
+
 if __name__ == '__main__':
     torch.manual_seed(0)
     args = parse_args()
-    root_path = '/home/disk1/ls/project/zheda_nsf/'
+    # root_path = '/home/disk1/ls/project/zheda_nsf/'
+    root_path = '/home1/ls/zheda_nsf_10_129_server/'
     index_path = root_path + 'data/index.pkl'
     dgl_data_path = root_path + 'data/dgl_data.pkl'
     emb_data_path = root_path + 'data/projects_text_emb.pkl'
@@ -250,14 +304,14 @@ if __name__ == '__main__':
     for ntype in G.ntypes:
         G.nodes[ntype].data['id'] = torch.arange(0, G.number_of_nodes(ntype))
         emb = nn.Embedding(G.number_of_nodes(ntype), args.n_dim) #, requires_grad=False
-        nn.init.xavier_uniform_(emb.weight)
-        emb.weight.data[0] = 0
+        # nn.init.xavier_uniform_(emb.weight)
+        # emb.weight.data[0] = 0
         node_emb[ntype] = emb.to(device)
 
     # G = G.to(device)
 
     train_data_loader = DataLoader(
-        dataset=NSFDataset(G, train_data, train_projects_text_emb, args),
+        dataset=NSFDataset(G, train_data, train_projects_text_emb, args, 'train'),
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=8,
@@ -265,7 +319,7 @@ if __name__ == '__main__':
         pin_memory=True
     )
     valid_data_loader = DataLoader(
-        dataset=NSFDataset(G, valid_data, train_projects_text_emb, args),
+        dataset=NSFDataset(G, valid_data, train_projects_text_emb, args, 'valid'),
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=8,
@@ -273,13 +327,17 @@ if __name__ == '__main__':
         pin_memory=True
     )
     test_data_loader = DataLoader(
-        dataset=NSFDataset(G, test_data, train_projects_text_emb, args),
+        dataset=NSFDataset(G, test_data, train_projects_text_emb, args, 'test'),
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=8,
         collate_fn=graph_collate,
         pin_memory=True
     )
+
+    print(len(train_data_loader))
+    print(len(valid_data_loader))
+    print(len(test_data_loader))
 
     hgt_model = HGT(node_emb,
                 node_dict, edge_dict,
@@ -288,7 +346,6 @@ if __name__ == '__main__':
                 n_out=args.n_dim,
                 n_layers=args.n_neigh_layer,
                 n_heads=args.n_head,
-                device=device,
                 use_norm=True).to(device)
 
 

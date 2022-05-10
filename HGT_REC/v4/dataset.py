@@ -60,8 +60,11 @@ class NSFDataset(Dataset):
         project_text_emb = self.data[index][1]
         pos_person = self.data[index][2]
         neg_person_list = self.data[index][3]
-
-        similar_id, emb_weight = self.Calculate_Similarity(project_text_emb)
+        if self.label == 'train':
+            similar_id = [project_id]
+            emb_weight = 1
+        else:
+            similar_id, emb_weight = self.Calculate_Similarity(project_text_emb)
 
         person_list = torch.LongTensor([pos_person] + neg_person_list)
         similar_id = torch.LongTensor(similar_id)
@@ -70,9 +73,9 @@ class NSFDataset(Dataset):
         return project_id, sub_g, similar_id, emb_weight, pos_person, neg_person_list
 
     def __len__(self):
-        if self.label == 'train':
-            return 20000
-        else:
-            return 800
-        # return len(self.data)
-        return 1000
+        # if self.label == 'train':
+        #     return 20000
+        # else:
+        #     return 800
+        return len(self.data)
+        # return 1000
