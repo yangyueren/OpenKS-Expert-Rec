@@ -11,6 +11,7 @@ class NSFDataset(Dataset):
         self.args = args
         self.G = G
         self.proj_text_emb = np.array(list(projects_text_emb.values()))
+        print(self.proj_text_emb.shape)
         self.proj_text_id = np.array(list(projects_text_emb.keys()))
         self.label = label
 
@@ -23,12 +24,12 @@ class NSFDataset(Dataset):
         similar_id = self.proj_text_id[indices[-self.args.max_project:]]
         return similar_id, emb_weight
 
-    def get_subgraph_from_heterograph(self, similar_id, person_list):
+    def get_subgraph_from_heterograph(self, person_list):
 
-        subgraph_in = dgl.sampling.sample_neighbors(self.G, nodes={'project':similar_id, 'person':person_list}, fanout=self.args.n_max_neigh[0],
+        subgraph_in = dgl.sampling.sample_neighbors(self.G, nodes={'person':person_list}, fanout=self.args.n_max_neigh[0],
                                                         edge_dir='in')
         nodes_subgraph = defaultdict(set)
-        nodes_subgraph['project'].update(similar_id)
+        # nodes_subgraph['project'].update(similar_id)
         nodes_subgraph['person'].update(person_list)
 
         for layer in range(1, self.args.n_neigh_layer):
@@ -61,18 +62,18 @@ class NSFDataset(Dataset):
         pos_person = self.data[index][2]
         neg_person_list = self.data[index][3]
 
-        similar_id, emb_weight = self.Calculate_Similarity(project_text_emb)
+        # similar_id, emb_weight = self.Calculate_Similarity(project_text_emb)
 
         person_list = torch.LongTensor([pos_person] + neg_person_list)
-        similar_id = torch.LongTensor(similar_id)
-        sub_g = self.get_subgraph_from_heterograph(similar_id, person_list)
+        # similar_id = torch.LongTensor(similar_id)
+        sub_g = self.get_subgraph_from_heterograph(person_list)
 
-        return project_id, sub_g, similar_id, emb_weight, pos_person, neg_person_list
+        return project_id, sub_g, project_text_emb, pos_person, neg_person_list
 
     def __len__(self):
-        if self.label == 'train':
-            return 20000
-        else:
-            return 800
-        # return len(self.data)
-        return 1000
+        # if self.label == 'train':
+        #     return 20000
+        # else:
+        #     return 800
+        return len(self.data)
+        # return 1000

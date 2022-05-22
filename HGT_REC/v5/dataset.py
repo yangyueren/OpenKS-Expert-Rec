@@ -11,6 +11,7 @@ class NSFDataset(Dataset):
         self.args = args
         self.G = G
         self.proj_text_emb = np.array(list(projects_text_emb.values()))
+        print(self.proj_text_emb.shape)
         self.proj_text_id = np.array(list(projects_text_emb.keys()))
         self.label = label
 

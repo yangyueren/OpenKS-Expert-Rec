@@ -15,10 +15,8 @@ with open(root_path + 'val_rel_is_principal_investigator_of.pkl', 'rb') as f:
     valid_data = pickle.load(f)
 with open(root_path + 'test_rel_is_principal_investigator_of.pkl', 'rb') as f:
     test_data = pickle.load(f)
-with open(root_path + 'project_emb_bert.pkl', 'rb') as f:
-    project_emb_data = pickle.load(f)
-with open(root_path + 'paper_emb_bert.pkl', 'rb') as f:
-    paper_emb_data = pickle.load(f)
+with open(root_path + 'project_emb_all_mpnet_base_v2.pkl', 'rb') as f:
+    emb_data = pickle.load(f)
 
 train_project = []
 for train_one in train_data:
@@ -101,16 +99,11 @@ for paper in papers:
 
 projects_text_emb = {}
 train_projects_text_emb ={}
-for i in range(len(project_emb_data)):
-    if project_emb_data[i][2] is not None:
-        projects_text_emb[project2index[project_emb_data[i][0]]] = project_emb_data[i][2]
-        if project_emb_data[i][0] in train_project:
-            train_projects_text_emb[project2index[project_emb_data[i][0]]] = project_emb_data[i][2]
-
-paper_text_emb = {}
-for i in range(len(paper_emb_data)):
-    if paper_emb_data[i][2] is not None:
-        paper_text_emb[paper2index[paper_emb_data[i][0]]] = paper_emb_data[i][2]
+for i in range(len(emb_data)):
+    if emb_data[i][2] is not None:
+        projects_text_emb[project2index[emb_data[i][0]]] = emb_data[i][2]
+        if emb_data[i][0] in train_project:
+            train_projects_text_emb[project2index[emb_data[i][0]]] = emb_data[i][2]
 
 train_dataset = []
 for index in range(len(train_data)):
@@ -169,7 +162,5 @@ with open(root_path + '/valid_dataset.pkl', 'wb') as f:
 with open(root_path + '/test_dataset.pkl', 'wb') as f:
     pickle.dump(test_dataset, f)
 
-with open(root_path + '/text_emb.pkl', 'wb') as f:
+with open(root_path + '/projects_text_emb.pkl', 'wb') as f:
     pickle.dump(train_projects_text_emb, f)
-    pickle.dump(projects_text_emb, f)
-    pickle.dump(paper_text_emb, f)

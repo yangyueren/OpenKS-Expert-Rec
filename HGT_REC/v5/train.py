@@ -1,6 +1,7 @@
 import dgl
 import torch.nn as nn
 import pickle
+import json
 import numpy as np
 import argparse
 from model import *
@@ -16,20 +17,20 @@ def parse_args():
 
     parser.add_argument('--n_epoch', type=int, default=200,
                         help='upper epoch limit')
-    parser.add_argument('--batch_size', type=int, default=8,
+    parser.add_argument('--batch_size', type=int, default=64,
                         help='batch size')
-    parser.add_argument('--n_hid', type=int, default=128)
-    parser.add_argument('--n_dim', type=int, default=256)
+    parser.add_argument('--n_hid', type=int, default=192)
+    parser.add_argument('--n_dim', type=int, default=768)
     parser.add_argument('--clip', type=int, default=1.0)
     parser.add_argument('--lr', type=float, default=5e-4,
                         help='initial learning rate')
-    parser.add_argument('--max_project', type=int, default=1,
+    parser.add_argument('--max_project', type=int, default=3,
                         help='max number of projects the project related to')
     parser.add_argument('--n_max_neigh', type=int, default=[5, 5],
                         help='max number of neighs for each layer')
     parser.add_argument('--n_neigh_layer', type=int, default=2,
                         help='number of layers')
-    parser.add_argument('--n_head', type=int, default=2,
+    parser.add_argument('--n_head', type=int, default=4,
                         help='number of head')
     parser.add_argument('--cuda', action='store_true', default=True,
                         help='use GPU for training')
@@ -230,57 +231,142 @@ def inference_expert(model, args, infer_data):
 if __name__ == '__main__':
     torch.manual_seed(0)
     args = parse_args()
-    root_path = '/home/disk1/ls/project/zheda_nsf/'
+    root_path = '/home/disk1/ls/project/zheda_nsf/data/'
     # root_path = '/home1/ls/zheda_nsf_10_129_server/'
-    index_path = root_path + 'data/index.pkl'
-    dgl_data_path = root_path + 'data/dgl_data.pkl'
-    emb_data_path = root_path + 'data/projects_text_emb.pkl'
-    train_data_path = root_path + 'data/train_dataset.pkl'
-    valid_data_path = root_path + 'data/valid_dataset.pkl'
-    test_data_path = root_path + 'data/test_dataset.pkl'
+    # index_path = root_path + 'data/index.pkl'
+    # dgl_data_path = root_path + 'data/dgl_data.pkl'
+    # emb_data_path = root_path + 'data/projects_text_emb.pkl'
+    # train_data_path = root_path + 'data/train_dataset.pkl'
+    # valid_data_path = root_path + 'data/valid_dataset.pkl'
+    # test_data_path = root_path + 'data/test_dataset.pkl'
+    with open(root_path + 'entities_paper.pkl', 'rb') as f:
+        papers = pickle.load(f)
+    with open(root_path + 'entities_person.pkl', 'rb') as f:
+        persons = pickle.load(f)
+    with open(root_path + 'entities_project.pkl', 'rb') as f:
+        project = pickle.load(f)
+    with open(root_path + 'train_rel_is_principal_investigator_of.pkl', 'rb') as f:
+        train_data = pickle.load(f)
+    with open(root_path + 'val_rel_is_principal_investigator_of.pkl', 'rb') as f:
+        valid_data = pickle.load(f)
+    with open(root_path + 'test_rel_is_principal_investigator_of.pkl', 'rb') as f:
+        test_data = pickle.load(f)
+    with open(root_path + 'project_emb_bert.pkl', 'rb') as f:
+        pro_emb_data = pickle.load(f)
+    with open(root_path + 'paper_emb_bert.pkl', 'rb') as f:
+        paper_emb_data = pickle.load(f)
+
+    train_project = []
+    for train_one in train_data:
+        train_project.append(train_one[2])
+
+    projects = [json.loads(p) for p in project]
+    projects = sorted(projects, key=lambda x: x['AwardID'])
+    project2index = {}
+    index2project = {}
+    for index in range(len(projects)):
+        project2index[projects[index]['AwardID']] = index
+        index2project[index] = projects[index]['AwardID']
+
+    papers = sorted(papers, key=lambda x: x['_id'])
+    paper2index = {}
+    index2paper = {}
+    for index in range(len(papers)):
+        paper2index[papers[index]['_id']] = index
+        index2paper[index] = papers[index]['_id']
+
+    person2index = {}
+    index2person = {}
+    index = 0
+    for id in persons:
+        person2index[id] = index
+        index2person[index] = id
+        index += 1
+
+    project_main_row = []
+    person_main_col = []
+    project_co_row = []
+    person_co_col = []
+    for project in projects:
+        if project['AwardID'] in train_project:
+            for role in project['Investigator']:
+                if role['RoleCode'] == 'Principal Investigator':
+                    project_main_row.append(project2index[project['AwardID']])
+                    person_main_col.append(person2index[role['uid']])
+                elif role['RoleCode'] == 'Co-Principal Investigator':
+                    project_co_row.append(project2index[project['AwardID']])
+                    person_co_col.append(person2index[role['uid']])
+
+    paper_auther_row = []
+    author_col = []
+    paper_ref_row = []
+    paper_ref_col = []
+    for paper in papers:
+        for author in paper['authors']:
+            paper_auther_row.append(paper2index[paper['_id']])
+            author_col.append(person2index[author['_id']])
+        try:
+            # sometimes no references or no information about it
+            temp = paper['references']
+        except:
+            # print(paper)
+            continue
+        for ref in temp:
+            try:
+                paper_ref_col.append(paper2index[ref])
+            except:
+                continue
+            paper_ref_row.append(paper2index[paper['_id']])
+
+    pro_id = list(project2index.keys())
+    train_projects_text_emb = {}
+    assert len(pro_id) == len(pro_emb_data), 'error'
+    for i in range(len(pro_emb_data)):
+        if index2project[i] in train_project:
+            # print(pro_emb_data[i])
+            train_projects_text_emb[i] = pro_emb_data[i].numpy()
+
+    train_dataset = []
+    for index in range(len(train_data)):
+        project_id = project2index[train_data[index][2]]
+        pos_person = person2index[train_data[index][1]]
+        project_text_emb = pro_emb_data[project_id].numpy()
+        neg_person = []
+        for i in range(len(train_data[index][4])):
+            neg_person.append(person2index[train_data[index][4][i]])
+        train_dataset.append((project_id, project_text_emb, pos_person, neg_person))
+
+    valid_dataset = []
+    for index in range(len(valid_data)):
+        project_id = project2index[valid_data[index][2]]
+        pos_person = person2index[valid_data[index][1]]
+        project_text_emb = pro_emb_data[project_id].numpy()
+        neg_person = []
+        for i in range(len(valid_data[index][4])):
+            neg_person.append(person2index[valid_data[index][4][i]])
+        valid_dataset.append((project_id, project_text_emb, pos_person, neg_person))
+
+    test_dataset = []
+    for index in range(len(test_data)):
+        project_id = project2index[test_data[index][2]]
+        pos_person = person2index[test_data[index][1]]
+        project_text_emb = pro_emb_data[project_id].numpy()
+        neg_person = []
+        for i in range(len(test_data[index][4])):
+            neg_person.append(person2index[test_data[index][4][i]])
+        test_dataset.append((project_id, project_text_emb, pos_person, neg_person))
 
     print('start')
-
-    with open(index_path, 'rb') as f:
-        project2index = pickle.load(f)
-        index2project = pickle.load(f)
-        paper2index = pickle.load(f)
-        index2paper = pickle.load(f)
-        person2index = pickle.load(f)
-        index2person = pickle.load(f)
-
-    with open(dgl_data_path, 'rb') as f:
-        project_main_row = pickle.load(f)
-        person_main_col = pickle.load(f)
-        project_co_row = pickle.load(f)
-        person_co_col = pickle.load(f)
-        paper_ref_row = pickle.load(f)
-        paper_ref_col = pickle.load(f)
-        paper_auther_row = pickle.load(f)
-        author_col = pickle.load(f)
-
-    with open(emb_data_path, "rb") as f:
-        train_projects_text_emb = pickle.load(f)
-
-    with open(train_data_path, "rb") as f:
-        train_data = pickle.load(f)
-
-    with open(valid_data_path, "rb") as f:
-        valid_data = pickle.load(f)
-
-    with open(test_data_path, "rb") as f:
-        test_data = pickle.load(f)
-
-    use_cuda = torch.cuda.is_available() and args.cuda
-    device = torch.device('cuda' if use_cuda else 'cpu')
+    # use_cuda = torch.cuda.is_available() and args.cuda
+    # device = torch.device('cuda' if use_cuda else 'cpu')
     # print(device)
-    # device = torch.device('cpu')
+    device = torch.device('cpu')
 
     G = dgl.heterograph({
         ('project', 'investigated-by', 'person'): (project_main_row, person_main_col),
         ('person', 'investigate', 'project'): (person_main_col, project_main_row),
-        ('project', 'co-investigated-by', 'person'): (project_co_row, person_co_col),
-        ('person', 'co-investigate', 'project'): (person_co_col, project_co_row),
+        # ('project', 'co-investigated-by', 'person'): (project_co_row, person_co_col),
+        # ('person', 'co-investigate', 'project'): (person_co_col, project_co_row),
         ('paper', 'cite', 'paper'): (paper_ref_row, paper_ref_col),
         ('paper', 'cited-by', 'paper'): (paper_ref_col, paper_ref_row),
         ('paper', 'writed-by', 'person'): (paper_auther_row, author_col),
@@ -304,15 +390,16 @@ if __name__ == '__main__':
     node_emb = {}
     for ntype in G.ntypes:
         G.nodes[ntype].data['id'] = torch.arange(0, G.number_of_nodes(ntype))
-        emb = nn.Embedding(G.number_of_nodes(ntype), args.n_dim) #, requires_grad=False
-        # nn.init.xavier_uniform_(emb.weight)
-        # emb.weight.data[0] = 0
-        node_emb[ntype] = emb.to(device)
 
+    emb = nn.Embedding(G.number_of_nodes('person'), args.n_dim)
+    node_emb['person'] = emb.to(device)
+    emb = nn.Embedding.from_pretrained(pro_emb_data,freeze=False)
+    node_emb['project'] = emb.to(device)
+    emb = nn.Embedding.from_pretrained(paper_emb_data,freeze=False)
+    node_emb['paper'] = emb.to(device)
     # G = G.to(device)
-
     train_data_loader = DataLoader(
-        dataset=NSFDataset(G, train_data, train_projects_text_emb, args, 'train'),
+        dataset=NSFDataset(G, train_dataset, train_projects_text_emb, args, 'train'),
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=8,
@@ -320,7 +407,7 @@ if __name__ == '__main__':
         pin_memory=True
     )
     valid_data_loader = DataLoader(
-        dataset=NSFDataset(G, valid_data, train_projects_text_emb, args, 'valid'),
+        dataset=NSFDataset(G, valid_dataset, train_projects_text_emb, args, 'valid'),
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=8,
@@ -328,7 +415,7 @@ if __name__ == '__main__':
         pin_memory=True
     )
     test_data_loader = DataLoader(
-        dataset=NSFDataset(G, test_data, train_projects_text_emb, args, 'test'),
+        dataset=NSFDataset(G, test_dataset, train_projects_text_emb, args, 'test'),
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=8,
@@ -349,7 +436,8 @@ if __name__ == '__main__':
                 n_heads=args.n_head,
                 use_norm=True).to(device)
 
-
+    del papers, persons, project, train_data, valid_data, test_data, pro_emb_data, paper_emb_data, projects
+    torch.cuda.empty_cache()
     print('Training HGT with #param: %d' % (get_n_params(hgt_model)))
     train(hgt_model, train_data_loader, valid_data_loader, test_data_loader, device, args)
 
