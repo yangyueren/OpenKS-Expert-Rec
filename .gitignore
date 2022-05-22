@@ -18,7 +18,9 @@
 /DualEncoder/**/save
 
 
-
+/LDA
+/NER
+/tfidf
 
 
 

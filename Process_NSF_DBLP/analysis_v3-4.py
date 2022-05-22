@@ -86,3 +86,57 @@ save_to_disk(train_rel_is_principal_investigator_of, './data/nsfkg/train_rel_is_
 save_to_disk(val_rel_is_principal_investigator_of, './data/nsfkg/val_rel_is_principal_investigator_of.pkl')
 save_to_disk(test_rel_is_principal_investigator_of, './data/nsfkg/test_rel_is_principal_investigator_of.pkl')
 
+
+
+
+def task2_dataset(entities_project, entities_person, year_fn):
+    triples = []
+    for proj in entities_project:
+        p = json.loads(proj)
+        Investigator = p['Investigator']
+        AwardID = p['AwardID']
+        AwardEffectiveDate = p['AwardEffectiveDate']
+        year = int(AwardEffectiveDate[-4:])
+        invs = OrderedSet()
+        common_invesotrs = OrderedSet()
+        for inv in Investigator:
+            invs.add(inv['uid'])
+            if inv['RoleCode'] != 'Principal Investigator':
+                common_invesotrs.add(inv['uid'])
+        if year_fn(year):
+            neg_persons = OrderedSet()
+            while len(neg_persons) + len(common_invesotrs) < 100:
+                idx = random.randint(0,len(entities_person)-1)
+                if entities_person[idx] not in invs:
+                    neg_persons.add(entities_person[idx])
+            if len(common_invesotrs) == 0 or len(p['AbstractNarration']) < 10 or AwardID is None:
+                continue
+                
+            triples.append( ('is_principal_investigator_of', list(common_invesotrs), AwardID, year, list(neg_persons) )) 
+    print(f'is_investigator_of_except_principal {len(triples)}, each with some negative persons.')
+    return triples
+
+def train_year_fn(year):
+    if year < 2015:
+        return True
+train_rel_is_common_investigator_of = task2_dataset(entities_project, entities_person, train_year_fn)
+print(train_rel_is_common_investigator_of[0])
+
+
+def test_year_fn(year):
+    if year >= 2015:
+        return True
+is_common_investigator_of = task2_dataset(entities_project, entities_person, test_year_fn)
+val_rel_is_common_investigator_of = []
+test_rel_is_common_investigator_of = []
+for triple in is_common_investigator_of:
+    if random.random() < 0.3:
+        val_rel_is_common_investigator_of.append(triple)
+    else:
+        test_rel_is_common_investigator_of.append(triple)
+print(f'val_rel_is_common_investigator_of {len(val_rel_is_common_investigator_of)}')
+print(f'test_rel_is_common_investigator_of {len(test_rel_is_common_investigator_of)}')
+save_to_disk(train_rel_is_common_investigator_of, './data/nsfkg/train_rel_is_common_investigator_of.pkl')
+save_to_disk(val_rel_is_common_investigator_of, './data/nsfkg/val_rel_is_common_investigator_of.pkl')
+save_to_disk(test_rel_is_common_investigator_of, './data/nsfkg/test_rel_is_common_investigator_of.pkl')
+
