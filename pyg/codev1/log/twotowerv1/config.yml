@@ -1,8 +1,7 @@
 config:
   name: TwoTowerRec
-  log_dir: ./log/twotowerv1-noselfloop-in-graph/
-  desc: "remove T.transform in nsf_dataset.py when creating graph"
-  
+  log_dir: ./log/twotowerv1/
+
   entities_person: ../../data/datav1/entities_person.pkl
   # entities_project: ../../data/datav1/entities_project.pkl
   # entities_paper: ../../data/datav1/entities_paper.pkl
@@ -30,7 +29,7 @@ config:
   test_data: ./data/test_rel_pricipal_investigator.pkl
 
   epochs: 100
-  batch_size: 96
+  batch_size: 128
   test_batch_size: 64
 
   bert_path: /home/zy/data2/yyr/codes/kg4proj-rec/OpenKS-Expert-Rec/DualEncoder/pretrained_model/bert-base-cased

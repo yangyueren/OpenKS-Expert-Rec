@@ -6,11 +6,12 @@
 *.log
 
 *.pkl
+*.pth
 
 /data
 /pyg/**/data
 /pyg/**/tmp
-/pyg/**/log
+/pyg/**/log/*.log
 
 /DualEncoder/pretrained_model
 /DualEncoder/**/data

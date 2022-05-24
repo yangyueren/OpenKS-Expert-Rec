@@ -1,7 +1,6 @@
 
 from collections import defaultdict
 import os
-import copy
 from turtle import pd
 from tqdm import tqdm
 import torch
@@ -19,9 +18,9 @@ from torch_geometric.nn import HGTConv, Linear
 class GAT(torch.nn.Module):
     def __init__(self, hidden_channels, out_channels):
         super().__init__()
-        self.conv1 = GATConv((-1, -1), hidden_channels)
+        self.conv1 = GATConv((-1, -1), hidden_channels, add_self_loops=False)
         self.lin1 = Linear(-1, hidden_channels)
-        self.conv2 = GATConv((-1, -1), out_channels)
+        self.conv2 = GATConv((-1, -1), out_channels, add_self_loops=False)
         self.lin2 = Linear(-1, out_channels)
 
     def forward(self, x, edge_index):
@@ -63,23 +62,16 @@ class GraphModel(nn.Module):
         hidden_channels = config.hidden_channels
         out_channels = config.out_channels
         graph = GAT(hidden_channels=hidden_channels, out_channels=out_channels)
-        Gg = copy.deepcopy(G)
-        del Gg['project']
-        self.graph = to_hetero(graph, Gg.metadata(), aggr='sum')
+        self.graph = to_hetero(graph, G.metadata(), aggr='sum')
         # self.graph = HGT(G, hidden_channels=hidden_channels, out_channels=out_channels, num_heads=2, num_layers=2)
         self.fc1 = nn.Linear(out_channels*2, out_channels)
         self.drop = nn.Dropout()
         self.fc2 = nn.Linear(out_channels, 1)
-        self.fc3 = nn.Linear(768, out_channels)
-
 
     def get_graph_emb(self, sub_G, nodeids, node_type_name):
-        if node_type_name == 'project':
-            update_G = sub_G
-            nodes_feat = self.fc3(update_G[node_type_name].x)
-        else:
-            update_G = self.graph(sub_G.x_dict, sub_G.edge_index_dict)
-            nodes_feat = update_G[node_type_name]
+
+        update_G = self.graph(sub_G.x_dict, sub_G.edge_index_dict)
+        nodes_feat = update_G[node_type_name]
         idxs = []
         nids = sub_G[node_type_name].n_id
         assert len(nids.shape) == 1, 'shape error'

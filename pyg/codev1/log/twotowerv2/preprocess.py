@@ -44,71 +44,56 @@ def preprocess(config):
     
 
 
-    # paper = load_from_disk(config.entities_paper)
-    # paper = sorted(paper, key=lambda x: x['_id'])
-    # paper2id = {}
-    # for p in paper:
-    #     paper2id[p['_id']] = len(paper2id)
-    # assert len(paper2id) == len(set(paper2id.keys())), 'error'
-    # save_to_disk(paper, './data/paper.pkl')
-    # save_to_disk(paper2id, './data/paper2id.pkl')
+    paper = load_from_disk(config.entities_paper)
+    paper = sorted(paper, key=lambda x: x['_id'])
+    paper2id = {}
+    for p in paper:
+        paper2id[p['_id']] = len(paper2id)
+    assert len(paper2id) == len(set(paper2id.keys())), 'error'
+    save_to_disk(paper, './data/paper.pkl')
+    save_to_disk(paper2id, './data/paper2id.pkl')
     
 
 
-    # rel_co_author = load_from_disk(config.rel_co_author)
-    # edge = []
-    # for tri in rel_co_author:
-    #     _, person1, person2, year = tri
-    #     edge.append((person2id[person1], person2id[person2]))
-    # save_to_disk(edge, './data/rel_co_author.pkl')
-
-    # rel_cooperate = load_from_disk(config.rel_cooperate)
-    # edge = []
-    # for tri in rel_cooperate:
-    #     _, person1, person2, year = tri
-    #     edge.append((person2id[person1], person2id[person2]))
-    # save_to_disk(edge, './data/rel_cooperate.pkl')
-
-
-    # rel_is_publisher_of = load_from_disk(config.rel_is_publisher_of)
-    # edge = []
-    # for tri in rel_is_publisher_of:
-    #     _, personid, paperid, year = tri
-    #     edge.append((paper2id[paperid], person2id[personid]))
-    # save_to_disk(edge, './data/rel_published_by.pkl')
-
-
-    # rel_reference = load_from_disk(config.rel_reference)
-    # edge = []
-    # for tri in rel_reference:
-    #     _, paperid, refid, year = tri
-    #     if refid not in paper2id or paperid not in paper2id:
-    #         continue
-    #     edge.append((paper2id[refid], paper2id[paperid]))
-    # # src -> dst
-    # save_to_disk(edge, './data/rel_reference.pkl')
-
-
-    train_rel_common_investigator = load_from_disk(config.rel_common_investigator)
+    rel_co_author = load_from_disk(config.rel_co_author)
     edge = []
-    for tri in train_rel_common_investigator:
-        try:
-            _, personids, projectid, year, neg_personids = tri
-            for personid in personids:
-                edge.append((project2id[projectid], person2id[personid]))
-        except Exception as e:
-            import pdb; pdb.set_trace()
-    save_to_disk(edge, './data/rel_common_investigator_by.pkl')
+    for tri in rel_co_author:
+        _, person1, person2, year = tri
+        edge.append((person2id[person1], person2id[person2]))
+    save_to_disk(edge, './data/rel_co_author.pkl')
 
+    rel_cooperate = load_from_disk(config.rel_cooperate)
+    edge = []
+    for tri in rel_cooperate:
+        _, person1, person2, year = tri
+        edge.append((person2id[person1], person2id[person2]))
+    save_to_disk(edge, './data/rel_cooperate.pkl')
+
+
+    rel_is_publisher_of = load_from_disk(config.rel_is_publisher_of)
+    edge = []
+    for tri in rel_is_publisher_of:
+        _, personid, paperid, year = tri
+        edge.append((paper2id[paperid], person2id[personid]))
+    save_to_disk(edge, './data/rel_published_by.pkl')
+
+
+    rel_reference = load_from_disk(config.rel_reference)
+    edge = []
+    for tri in rel_reference:
+        _, paperid, refid, year = tri
+        if refid not in paper2id or paperid not in paper2id:
+            continue
+        edge.append((paper2id[refid], paper2id[paperid]))
+    # src -> dst
+    save_to_disk(edge, './data/rel_reference.pkl')
     
 
     train_rel_pricipal_investigator = load_from_disk(config.train_data)
     edge = []
     for tri in train_rel_pricipal_investigator:
-        
         _, personid, projectid, year, neg_personids = tri
         edge.append((project2id[projectid], person2id[personid]))
-    
     save_to_disk(edge, './data/rel_pricipal_investigator_by.pkl')
 
 
@@ -198,6 +183,6 @@ if __name__ == '__main__':
     with open('config.yml', 'r') as f:
         config = yaml.safe_load(f)
         config = Dict2Obj(config).config
-    preprocess(config)
-    # config.device = torch.device('cuda:0')
-    # get_embedding(config)
+    # preprocess(config)
+    config.device = torch.device('cuda:0')
+    get_embedding(config)

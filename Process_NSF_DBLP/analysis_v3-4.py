@@ -90,6 +90,7 @@ save_to_disk(test_rel_is_principal_investigator_of, './data/nsfkg/test_rel_is_pr
 
 
 def task2_dataset(entities_project, entities_person, year_fn):
+    entities_personset = set(entities_person)
     triples = []
     for proj in entities_project:
         p = json.loads(proj)
@@ -100,6 +101,8 @@ def task2_dataset(entities_project, entities_person, year_fn):
         invs = OrderedSet()
         common_invesotrs = OrderedSet()
         for inv in Investigator:
+            if inv['uid'] not in entities_personset:
+                continue
             invs.add(inv['uid'])
             if inv['RoleCode'] != 'Principal Investigator':
                 common_invesotrs.add(inv['uid'])

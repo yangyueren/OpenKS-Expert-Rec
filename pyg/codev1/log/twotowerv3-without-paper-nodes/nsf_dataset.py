@@ -42,40 +42,37 @@ class NSFDataset(Dataset):
         data['project'].x = project_emb # [num_institutions, num_features_institution]
         data['project'].n_id = torch.arange(data['project'].num_nodes)
 
-        logger.info('remove project nodes.')
-        data['paper'].x = paper_emb  # [num_papers, num_features_paper]
-        data['paper'].n_id = torch.arange(data['paper'].num_nodes)
+        logger.info('remove paper nodes.')
+        # data['paper'].x = paper_emb  # [num_papers, num_features_paper]
+        # data['paper'].n_id = torch.arange(data['paper'].num_nodes)
         
         
         def get_edge_index(path):
             edge = load_from_disk(path)
-            logger.info(f'{path} has edges of {len(edge)}')
             s2t = torch.tensor(edge).transpose(1,0).contiguous()
             t2s = s2t[[1,0], :].contiguous()
             return s2t, t2s
 
         s2t, t2s = get_edge_index(config.rel_reference)
-        data['paper', 'cited_by', 'paper'].edge_index = s2t # [2, num_edges_cites]
-
+        #data['paper', 'cited_by', 'paper'].edge_index = s2t # [2, num_edges_cites]
+        # data['paper', 'cited_by_reverse', 'paper'].edge_index = t2s # [2, num_edges_cites]
+        
         s2t, t2s = get_edge_index(config.rel_published_by)
-        data['paper', 'published_by', 'person'].edge_index = s2t # [2, num_edges_writes]
-
+        #data['paper', 'published_by', 'person'].edge_index = s2t # [2, num_edges_writes]
+        # data['paper', 'published_by_reverse', 'person'].edge_index = t2s # [2, num_edges_writes]
+        
         s2t, t2s = get_edge_index(config.rel_cooperate)
-        data['person', 'cooperate', 'person'].edge_index = s2t # [2, num_edges_affiliated]
+        # data['person', 'cooperate', 'person'].edge_index = s2t # [2, num_edges_affiliated]
         
         s2t, t2s = get_edge_index(config.rel_co_author)
-        data['person', 'co_author', 'person'].edge_index = s2t # [2, num_edges_affiliated]
+        #data['person', 'co_author', 'person'].edge_index = s2t # [2, num_edges_affiliated]
         
-        # s2t, t2s = get_edge_index(config.rel_pricipal_investigator_by)
-        # data['project', 'investigate_by', 'person'].edge_index = s2t # [2, num_edges_topic]
-
-        # s2t, t2s = get_edge_index(config.rel_common_investigator_by)
-        # data['project', 'common_investigate_by', 'person'].edge_index = s2t # [2, num_edges_topic]
-
+        s2t, t2s = get_edge_index(config.rel_pricipal_investigator_by)
+        data['project', 'investigate_by', 'person'].edge_index = s2t # [2, num_edges_topic]
+        # data['person', 'investigate_by_reverse', 'project'].edge_index = t2s
         
-        # transform = T.Compose([T.ToUndirected(merge=True), T.AddSelfLoops()])
-        # transform = T.Compose([ T.AddSelfLoops()])
-        # data = transform(data)
+        transform = T.Compose([T.ToUndirected(merge=True), T.AddSelfLoops()])
+        data = transform(data)
         return data
 
     def get_graph(self):

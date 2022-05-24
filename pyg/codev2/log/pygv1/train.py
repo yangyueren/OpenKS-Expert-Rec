@@ -57,12 +57,12 @@ def train(config):
     G = train_dataset.get_graph().to(config.device)
     logger.info(G)
 
-    test(config, model, test_dataset, G)
+    # test(config, model, test_dataset, G)
 
-    # investigate_edge = copy.deepcopy(G['project', 'investigate_by', 'person'].edge_index)
-    # investigate_reverse = copy.deepcopy(G['person', 'rev_investigate_by', 'project'].edge_index)
-    # common_investigate_edge = copy.deepcopy(G['project', 'common_investigate_by', 'person'].edge_index)
-    # common_investigate_reverse = copy.deepcopy(G['person', 'rev_common_investigate_by', 'project'].edge_index)
+    investigate_edge = copy.deepcopy(G['project', 'investigate_by', 'person'].edge_index)
+    investigate_reverse = copy.deepcopy(G['person', 'rev_investigate_by', 'project'].edge_index)
+    common_investigate_edge = copy.deepcopy(G['project', 'common_investigate_by', 'person'].edge_index)
+    common_investigate_reverse = copy.deepcopy(G['person', 'rev_common_investigate_by', 'project'].edge_index)
     for epoch in range(config.epochs):
         logger.info(f'epoch {epoch} begin...')
         model.train()
@@ -73,17 +73,17 @@ def train(config):
             project = project.to(config.device)
             label = label.to(config.device).float()
 
-            # remove_investigate_edge = get_edge_index_except_these_nodes(project, copy.deepcopy(investigate_edge), 0)
-            # remove_investigate_reverse_edge = get_edge_index_except_these_nodes(project, copy.deepcopy(investigate_reverse), 1)
-            # assert torch.sum(remove_investigate_edge[[1,0]] == remove_investigate_reverse_edge) == remove_investigate_edge.shape[1]*2, 'error'
-            # G['project', 'investigate_by', 'person'].edge_index = remove_investigate_edge
-            # G['person', 'rev_investigate_by', 'project'].edge_index = remove_investigate_reverse_edge
+            remove_investigate_edge = get_edge_index_except_these_nodes(project, copy.deepcopy(investigate_edge), 0)
+            remove_investigate_reverse_edge = get_edge_index_except_these_nodes(project, copy.deepcopy(investigate_reverse), 1)
+            assert torch.sum(remove_investigate_edge[[1,0]] == remove_investigate_reverse_edge) == remove_investigate_edge.shape[1]*2, 'error'
+            G['project', 'investigate_by', 'person'].edge_index = remove_investigate_edge
+            G['person', 'rev_investigate_by', 'project'].edge_index = remove_investigate_reverse_edge
 
-            # remove_common_investigate_edge = get_edge_index_except_these_nodes(project, copy.deepcopy(common_investigate_edge), 0)
-            # remove_common_investigate_reverse_edge = get_edge_index_except_these_nodes(project, copy.deepcopy(common_investigate_reverse), 1)
-            # assert torch.sum(remove_common_investigate_edge[[1,0]] == remove_common_investigate_reverse_edge) == remove_common_investigate_edge.shape[1]*2, 'error'
-            # G['project', 'common_investigate_by', 'person'].edge_index = remove_common_investigate_edge
-            # G['person', 'rev_common_investigate_by', 'project'].edge_index = remove_common_investigate_reverse_edge
+            remove_common_investigate_edge = get_edge_index_except_these_nodes(project, copy.deepcopy(common_investigate_edge), 0)
+            remove_common_investigate_reverse_edge = get_edge_index_except_these_nodes(project, copy.deepcopy(common_investigate_reverse), 1)
+            assert torch.sum(remove_common_investigate_edge[[1,0]] == remove_common_investigate_reverse_edge) == remove_common_investigate_edge.shape[1]*2, 'error'
+            G['project', 'common_investigate_by', 'person'].edge_index = remove_common_investigate_edge
+            G['person', 'rev_common_investigate_by', 'project'].edge_index = remove_common_investigate_reverse_edge
 
             # import pdb;pdb.set_trace()
             person_sub_graph = sampler_of_graph(person, 'person', G)
@@ -111,10 +111,10 @@ def train(config):
 
             logger.debug(f'epoch {epoch}, prec {prec:0.4f}, recall {recall:0.4f}, f1 {f1:0.4f} , loss {loss.cpu().data}' )
         if epoch > 0 and epoch % config.test_every_n_epoch == 0:
-            # G['project', 'investigate_by', 'person'].edge_index = copy.deepcopy(investigate_edge)
-            # G['person', 'rev_investigate_by', 'project'].edge_index = copy.deepcopy(investigate_reverse)
-            # G['project', 'common_investigate_by', 'person'].edge_index = copy.deepcopy(common_investigate_edge)
-            # G['person', 'rev_common_investigate_by', 'project'].edge_index = copy.deepcopy(common_investigate_reverse)
+            G['project', 'investigate_by', 'person'].edge_index = copy.deepcopy(investigate_edge)
+            G['person', 'rev_investigate_by', 'project'].edge_index = copy.deepcopy(investigate_reverse)
+            G['project', 'common_investigate_by', 'person'].edge_index = copy.deepcopy(common_investigate_edge)
+            G['person', 'rev_common_investigate_by', 'project'].edge_index = copy.deepcopy(common_investigate_reverse)
             recall = test(config, model, test_dataset, G)
             if recall > g_recall:
                 g_recall = recall

@@ -17,20 +17,28 @@ from torch_geometric.datasets import OGB_MAG
 from torch_geometric.loader import NeighborLoader
 
 transform = T.ToUndirected()  # Add reverse edge types.
-# data = OGB_MAG(root='../tmp', preprocess='metapath2vec', transform=transform)[0]
-# print(data.has_isolated_nodes())
-
-with open('./config.yml', 'r') as f:
-        config = yaml.safe_load(f)
-        config = Dict2Obj(config).config
-train_dataset = NSFDataset(config, config.train_data)
-data = train_dataset.get_graph()
-data['paper'].train_mask = torch.ones(len(data['paper'].x)).bool()
-data['paper'].y = torch.ones(len(data['paper'].x))
+data = OGB_MAG(root='../tmp', preprocess='metapath2vec', transform=transform)[0]
 print(data.has_isolated_nodes())
-transform = T.Compose([T.ToUndirected(), T.AddSelfLoops()])
-data = transform(data)
-print(data)
+
+# data['author'].x.requires_grad = True
+# data['paper'].x.requires_grad = True
+# data['field_of_study'].x.requires_grad=True
+# import copy
+
+# aa = copy.copy(data['paper'].x)
+# import pdb;pdb.set_trace()
+
+# with open('./config.yml', 'r') as f:
+#         config = yaml.safe_load(f)
+#         config = Dict2Obj(config).config
+# train_dataset = NSFDataset(config, config.train_data)
+# data = train_dataset.get_graph()
+# data['paper'].train_mask = torch.ones(len(data['paper'].x)).bool()
+# data['paper'].y = torch.ones(len(data['paper'].x))
+# print(data.has_isolated_nodes())
+# transform = T.Compose([T.ToUndirected(), T.AddSelfLoops()])
+# data = transform(data)
+# print(data)
 
 class GAT(torch.nn.Module):
     def __init__(self, hidden_channels, out_channels):
@@ -46,7 +54,7 @@ class GAT(torch.nn.Module):
         x = self.conv2(x, edge_index) + self.lin2(x)
         return x
 
-d = torch.device('cuda:1')
+d = torch.device('cpu')
 model = GAT(hidden_channels=64, out_channels=1).to(d)
 model = to_hetero(model, data.metadata(), aggr='sum')
 
@@ -74,9 +82,11 @@ def train():
         optimizer.zero_grad()
         batch_size = batch['paper'].batch_size
         out = model(batch.x_dict, batch.edge_index_dict)
+        
         loss = F.binary_cross_entropy_with_logits(out['paper'][:batch_size].squeeze(),
-                               batch['paper'].y[:batch_size])
+                               batch['paper'].y[:batch_size].float())
         loss.backward()
+        import pdb; pdb.set_trace()
         optimizer.step()
         print(loss)
         total_examples += batch_size
