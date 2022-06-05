@@ -140,21 +140,21 @@ def get_embedding(config):
     model = model.to(config.device)
     model.eval()
 
-    # project = load_from_disk(config.entities_project)
-    # projects = [json.loads(p) for p in project]
-    # project = sorted(projects, key=lambda x: x['AwardID'])
-    # project2id = {}
-    # for p in project:
-    #     project2id[p['AwardID']] = len(project2id)
-    # assert len(project2id) == len(set(project2id.keys())), 'error'
-    # project_text = []
-    # for p in project:
-    #     project_text.append(p['AwardTitle'] + ". " + p['AbstractNarration'])
-    # assert len(project_text) == len(project2id), 'error'
+    project = load_from_disk(config.entities_project)
+    projects = [json.loads(p) for p in project]
+    project = sorted(projects, key=lambda x: x['AwardID'])
+    project2id = {}
+    for p in project:
+        project2id[p['AwardID']] = len(project2id)
+    assert len(project2id) == len(set(project2id.keys())), 'error'
+    project_text = []
+    for p in project:
+        project_text.append(p['AwardTitle'] + ". " + p['AbstractNarration'])
+    assert len(project_text) == len(project2id), 'error'
     
-    # project_emb = encoder(project_text, model, tokenizer, config)
-    # assert len(project_emb) == len(project2id), 'error'
-    # save_to_disk(project_emb, './data/project_emb.pkl')
+    project_emb = encoder(project_text, model, tokenizer, config)
+    assert len(project_emb) == len(project2id), 'error'
+    save_to_disk(project_emb, './data/project_emb.pkl')
 
 
 
